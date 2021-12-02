@@ -238,10 +238,101 @@
      print(tf.argmax(test, axis=1)) # 返回每一行（纬度）最大值的索引
      ```
      
-   - 
    
-     
-     
-     
-     
-     
+3. 神经网络实现鸢尾花分类
+
+   （1）准备数据
+
+   - 数据集读入
+
+     从sklearn包datasets读入数据集
+
+     ```python
+     from sklearn.datasets import datasets
+     x_data = datasets.load_iris().data	#返回iris数据集所有输入特征
+     y_data = datasets.load_iris().target
+     ```
+
+   - 数据集乱序
+
+     ```python
+     np.random.seed(116)	#使用相同的seed，使输入特征/标签一一对应
+     np.random.shuffle(x_data)
+     np.random.seed(116)
+     np.random.shuffle(y_data)
+     tf.random.set_seed(116)
+     ```
+
+   - 生成训练集和测试集（即x_train / y_train，x_test / y_test）永不相见的训练集和测试集
+
+     ```python
+     x_train = x_data[:-30]
+     y_train = y_data[:-30]
+     x_test = x_data[-30:]
+     y_test = y_data[-30:]
+     ```
+
+   - 配成（输入特征，标签）对，每次读入一小撮（batch）
+
+     ```python
+     train_db = tf.data.Dataset.from_tensor_slices((x_train, y_train)).batch(32)
+     test_db = tf.data.Dataset.from_tensor_slices((x_test, y_test)).batch(32)
+     ```
+
+   （2）搭建网络
+
+   - 定义神经网络中所有可训练参数
+
+     ```python
+     w1 = tf.Variable(tf.random.truncated_normal([4, 3], stddev=0.1, seed=1))
+     b1 = tf.Variable(tf.random.truncated_normal([3], stddev=0.1, seed=1))
+     ```
+
+   （3）参数优化
+
+   - 嵌套循环迭代，with结构更新参数，显示当前loss
+
+     ```python
+     for epoch in range(epoch):	# 数据集级别迭代
+         for step, (x_train, y_train) in enumerate(train_db):	# batch级别迭代
+             with tf.GradientTape() as tape:	# 记录梯度信息
+                 前向传播过程计算y
+                 计算总loss
+             grads = tape.gradient(loss, [w1, b1])
+             w1.assign_sub(lr * grads[0])	# 参数自更新
+             b1.assign_sub(lr * grads[1])
+         print("Epoch {}, loss: {}".format(epoch, loss_all/4))
+     ```
+
+   （4）测试效果
+
+   - 计算当前参数前向传播后的准确率，显示当前acc
+
+     ```python
+     for x_test, y_test in test_db:
+         y = tf.matmul(h, w) + b	# y为预测结果
+         y = tf.nn.softmax(y)	# y符合概率分布
+         pred = tf.argmax(y, axis = 1)	# 返回y中最大值的索引，即预测的分类
+         pred = tf.cast(pred, dtype = y_test.dtype)	# 调整数据类型与标签一致
+         correct = tf.cast(tf.equal(pred, y_test), dtype=tf.int32)
+         correct = tf.reduce_sum(correct)	# 将每个batch的correct数加起来
+         total_correct += int(correct)	# 将所有batch中的correct数加起来
+         total_correct += x_test.shape[0]
+     acc = total_correct / total_number
+     print("test_acc:", acc)
+     ```
+
+   （5）acc / loss可视化
+
+   ```python
+   plt.title('Acc Curve')	# 图片标题
+   plt.xlabel('Epoch')	# x轴名称
+   plt.ylabel('Acc') # y轴名称
+   plt.plot(test_acc, label = '$Accuracy$')	# 逐点画出test_acc值并连线
+   plt.legend()
+   plt.show()
+   ```
+
+   
+
+1. 3123
